@@ -1,0 +1,1 @@
+"""OutputRow Pydantic model"""
