@@ -1,1 +1,47 @@
-"""All enum/allowed-value sets shared across stages"""
+"""Single source of truth for every allowed value set in the pipeline."""
+
+CLAIM_OBJECTS = {"car", "laptop", "package"}
+
+ISSUE_TYPES = {
+    "dent", "scratch", "crack", "glass_shatter", "broken_part", "missing_part",
+    "torn_packaging", "crushed_packaging", "water_damage", "stain", "none", "unknown",
+}
+
+CLAIM_STATUSES = {"supported", "contradicted", "not_enough_information"}
+
+SEVERITIES = {"none", "low", "medium", "high", "unknown"}
+
+IMAGE_QUALITIES = {"clear", "blurry", "low_light_or_glare", "wrong_angle", "cropped_or_obstructed"}
+
+DAMAGE_MATCH_VALUES = {"yes", "partial", "no", "unknown"}
+
+OBJECT_PART_MAP = {
+    "car": {"front_bumper", "rear_bumper", "door", "hood", "windshield",
+            "side_mirror", "headlight", "taillight", "fender", "quarter_panel", "body", "unknown"},
+    "laptop": {"screen", "keyboard", "trackpad", "hinge", "lid", "corner",
+               "port", "base", "body", "unknown"},
+    "package": {"box", "package_corner", "package_side", "seal", "label",
+                "contents", "item", "unknown"},
+}
+
+ALLOWED_RISK_FLAGS = {
+    "none", "blurry_image", "cropped_or_obstructed", "low_light_or_glare",
+    "wrong_angle", "wrong_object", "wrong_object_part", "damage_not_visible",
+    "claim_mismatch", "possible_manipulation", "non_original_image",
+    "text_instruction_present", "user_history_risk", "manual_review_required",
+}
+
+# Deterministic ordering for the final risk_flags string (Stage 6 uses this)
+ORDERED_FLAGS = [
+    "blurry_image", "cropped_or_obstructed", "low_light_or_glare", "wrong_angle",
+    "wrong_object", "wrong_object_part", "damage_not_visible", "claim_mismatch",
+    "possible_manipulation", "non_original_image", "text_instruction_present",
+    "user_history_risk", "manual_review_required",
+]
+
+OUTPUT_CSV_COLUMNS = [
+    "user_id", "image_paths", "user_claim", "claim_object",
+    "evidence_standard_met", "evidence_standard_met_reason", "risk_flags",
+    "issue_type", "object_part", "claim_status", "claim_status_justification",
+    "supporting_image_ids", "valid_image", "severity",
+]
