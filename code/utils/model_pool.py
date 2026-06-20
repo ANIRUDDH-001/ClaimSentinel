@@ -30,9 +30,9 @@ class ModelSpec:
 
 GEMINI_MODELS: list[ModelSpec] = [
     # Ordered by RPD descending (prefer highest daily budget)
+    ModelSpec("gemini", "gemini-2.5-flash",                   rpm=5,  tpm=250_000, rpd=20,  vision=True),
     ModelSpec("gemini", "gemini-3.1-flash-lite",              rpm=15, tpm=250_000, rpd=500, vision=True),
     ModelSpec("gemini", "gemini-2.5-flash-lite",              rpm=10, tpm=250_000, rpd=20,  vision=True),
-    ModelSpec("gemini", "gemini-2.5-flash",                   rpm=5,  tpm=250_000, rpd=20,  vision=True),
     ModelSpec("gemini", "gemini-3-flash",                     rpm=5,  tpm=250_000, rpd=20,  vision=True),
     ModelSpec("gemini", "gemini-3.5-flash",                   rpm=5,  tpm=250_000, rpd=20,  vision=True),
 ]

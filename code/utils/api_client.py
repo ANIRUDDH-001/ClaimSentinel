@@ -126,6 +126,11 @@ def _call_with_retry(spec: ModelSpec, prompt: str, image=None,
 
 
 
+TOKEN_USAGE = {
+    "gemini": {"calls": 0, "images": 0, "prompt_tokens": 0, "completion_tokens": 0},
+    "groq": {"calls": 0, "images": 0, "prompt_tokens": 0, "completion_tokens": 0}
+}
+
 def _call_gemini(model_id: str, prompt: str, image=None) -> dict:
     model = genai.GenerativeModel(
         model_name=model_id,
@@ -137,8 +142,14 @@ def _call_gemini(model_id: str, prompt: str, image=None) -> dict:
 
     if image is not None:
         response = model.generate_content([image, prompt])
+        TOKEN_USAGE["gemini"]["images"] += 1
     else:
         response = model.generate_content(prompt)
+
+    TOKEN_USAGE["gemini"]["calls"] += 1
+    if hasattr(response, "usage_metadata"):
+        TOKEN_USAGE["gemini"]["prompt_tokens"] += getattr(response.usage_metadata, "prompt_token_count", 0)
+        TOKEN_USAGE["gemini"]["completion_tokens"] += getattr(response.usage_metadata, "candidates_token_count", 0)
 
     return _safe_json_parse(response.text, model_id)
 
@@ -151,6 +162,12 @@ def _call_groq(model_id: str, prompt: str) -> dict:
         response_format={"type": "json_object"},
         max_tokens=1024,
     )
+    
+    TOKEN_USAGE["groq"]["calls"] += 1
+    if response.usage:
+        TOKEN_USAGE["groq"]["prompt_tokens"] += getattr(response.usage, "prompt_tokens", 0)
+        TOKEN_USAGE["groq"]["completion_tokens"] += getattr(response.usage, "completion_tokens", 0)
+
     return _safe_json_parse(response.choices[0].message.content, model_id)
 
 
