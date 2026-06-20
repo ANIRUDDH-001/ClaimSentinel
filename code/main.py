@@ -1,6 +1,9 @@
 """Entry point: reads claims.csv, runs the pipeline on every row, writes output.csv."""
 import logging
 import time
+from dotenv import load_dotenv
+load_dotenv()
+
 from config import CLAIMS_CSV, HISTORY_CSV, EVIDENCE_CSV, OUTPUT_CSV
 from utils.csv_handler import read_claims, read_user_history, read_evidence_requirements, write_output_csv
 from pipeline.orchestrator import process_claim
