@@ -21,8 +21,12 @@ def main():
 
     output_rows = []
     for i, row in enumerate(claims, start=1):
-        logging.info(f"[{i}/{len(claims)}] {row['user_id']} — {row['claim_object']}")
         output_rows.append(process_claim(row, user_history_df, evidence_req_df))
+
+    from utils import api_client
+    import json
+    print("\n--- Usage Summary ---")
+    print(json.dumps(api_client.get_usage_summary(), indent=2))
 
     write_output_csv(output_rows, OUTPUT_CSV)
 

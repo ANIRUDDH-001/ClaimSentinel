@@ -24,10 +24,13 @@ def main():
 
     for i, row in enumerate(rows, start=1):
         input_row = {k: row[k] for k in INPUT_FIELDS}
-        logging.info(f"[{i}/{len(rows)}] {row['user_id']} — {row['claim_object']}")
         pred = process_claim(input_row, user_history_df, evidence_req_df)
         predictions.append(pred)
         ground_truth.append(row)
+
+    from utils import api_client
+    print("\n--- Usage Summary ---")
+    print(json.dumps(api_client.get_usage_summary(), indent=2))
 
     report = full_report(predictions, ground_truth)
     print(json.dumps(report, indent=2))

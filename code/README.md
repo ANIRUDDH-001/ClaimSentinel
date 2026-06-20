@@ -3,15 +3,16 @@
 A multi-modal AI pipeline to verify damage claims based on user conversations and image evidence.
 
 ## Architecture
-
-The system processes each claim through a 3-Stage Pipeline:
-
-1. **Stage 1: Text Analysis (Router)**  
-   Analyzes the user's chat transcript to extract the core claim (what object, what part, what issue) and evaluates their historical risk profile.
-2. **Stage 2: Vision Analysis (Image-by-Image)**  
-   Evaluates each provided image independently against the claimed damage. It checks for image validity, authenticity (manipulation flags), visible damage, and severity.
-3. **Stage 3: Coherence & Synthesis (Judge)**  
-   Aggregates the findings from the text claim, user history, and all analyzed images to make a final ruling: `supported`, `contradicted`, or `not_enough_information`.
+A 9-stage pipeline, run once per claim:
+0. Pre-check (pure Python) — injection scan, user risk lookup, evidence requirement lookup
+1. Claim parser (LLM, text) — extracts the actual damage claim from the conversation
+2. Image analyzer (LLM, vision) — one call per submitted image
+3. Cross-image coherence (pure Python) — consistency checks, best-image selection
+4. Evidence evaluator (LLM, text) — is the image evidence sufficient to decide at all?
+5. Decision maker (LLM, text) — the core claim_status / issue_type / severity decision
+5.5. LLM-as-judge (LLM, text, different model family) — adversarial review of Stage 5
+6. Flag assembler (pure Python) — final risk_flags union and co-occurrence rules
+7. Validator (Pydantic) — final schema enforcement with a safe emergency fallback
 
 ## Models Used
 - **Groq Llama 3 (Text)**: Lightning fast text processing for Stages 1 and 3.
