@@ -8,6 +8,7 @@ import time
 import logging
 from pathlib import Path
 from PIL import Image
+import os
 import google.generativeai as genai
 from groq import Groq as GroqClient
 from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
@@ -15,8 +16,24 @@ from utils.model_pool import ModelPool, ModelSpec
 from utils.rate_limiter import rate_limiter
 from utils.cache import cache_get, cache_set
 
-import os
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+KEYS = [
+    os.environ.get("GOOGLE_API_KEY", ""),
+    os.environ.get("GOOGLE_API_KEY_2", ""),
+    os.environ.get("GOOGLE_API_KEY_3", ""),
+    os.environ.get("GOOGLE_API_KEY_4", ""),
+]
+KEYS = [k for k in KEYS if k]
+
+key_idx = 0
+if KEYS:
+    genai.configure(api_key=KEYS[0])
+
+def rotate_key():
+    global key_idx
+    key_idx = (key_idx + 1) % len(KEYS)
+    genai.configure(api_key=KEYS[key_idx])
+    logging.warning(f"Rotated Gemini API Key to index {key_idx}")
+
 _groq = GroqClient(api_key=os.environ["GROQ_API_KEY"])
 
 pool = ModelPool.get()
@@ -83,7 +100,7 @@ def _call_with_retry(spec: ModelSpec, prompt: str, image=None,
 
     for attempt in range(MAX_RETRIES):
         try:
-            rate_limiter.wait(spec.model_id, spec.rpm)
+            # rate_limiter.wait(spec.model_id, spec.rpm)
 
             if spec.provider == "gemini":
                 result = _call_gemini(spec.model_id, prompt, image)
@@ -94,10 +111,9 @@ def _call_with_retry(spec: ModelSpec, prompt: str, image=None,
             return result
 
         except (ResourceExhausted, RateLimitError) as e:
-            delay = 4.0 * (2 ** attempt)
-            logging.warning(f"Rate limit on {spec.model_id}, attempt {attempt+1}/{MAX_RETRIES}. "
-                          f"Waiting {delay}s")
-            time.sleep(delay)
+            logging.warning(f"Rate limit on {spec.model_id}. Rotating API key.")
+            rotate_key()
+            time.sleep(2.0)
             last_error = e
 
         except ServiceUnavailable as e:
@@ -126,10 +142,10 @@ def _call_with_retry(spec: ModelSpec, prompt: str, image=None,
 
 
 
-TOKEN_USAGE = {
-    "gemini": {"calls": 0, "images": 0, "prompt_tokens": 0, "completion_tokens": 0},
-    "groq": {"calls": 0, "images": 0, "prompt_tokens": 0, "completion_tokens": 0}
-}
+_usage_log = {"calls": 0, "input_tokens": 0, "output_tokens": 0, "images": 0}
+
+def get_usage_summary() -> dict:
+    return dict(_usage_log)
 
 def _call_gemini(model_id: str, prompt: str, image=None) -> dict:
     model = genai.GenerativeModel(
@@ -142,14 +158,16 @@ def _call_gemini(model_id: str, prompt: str, image=None) -> dict:
 
     if image is not None:
         response = model.generate_content([image, prompt])
-        TOKEN_USAGE["gemini"]["images"] += 1
     else:
         response = model.generate_content(prompt)
 
-    TOKEN_USAGE["gemini"]["calls"] += 1
-    if hasattr(response, "usage_metadata"):
-        TOKEN_USAGE["gemini"]["prompt_tokens"] += getattr(response.usage_metadata, "prompt_token_count", 0)
-        TOKEN_USAGE["gemini"]["completion_tokens"] += getattr(response.usage_metadata, "candidates_token_count", 0)
+    usage = getattr(response, "usage_metadata", None)
+    if usage:
+        _usage_log["input_tokens"] += getattr(usage, "prompt_token_count", 0)
+        _usage_log["output_tokens"] += getattr(usage, "candidates_token_count", 0)
+    _usage_log["calls"] += 1
+    if image is not None:
+        _usage_log["images"] += 1
 
     return _safe_json_parse(response.text, model_id)
 
@@ -163,10 +181,11 @@ def _call_groq(model_id: str, prompt: str) -> dict:
         max_tokens=1024,
     )
     
-    TOKEN_USAGE["groq"]["calls"] += 1
-    if response.usage:
-        TOKEN_USAGE["groq"]["prompt_tokens"] += getattr(response.usage, "prompt_tokens", 0)
-        TOKEN_USAGE["groq"]["completion_tokens"] += getattr(response.usage, "completion_tokens", 0)
+    usage = getattr(response, "usage", None)
+    if usage:
+        _usage_log["input_tokens"] += getattr(usage, "prompt_tokens", 0)
+        _usage_log["output_tokens"] += getattr(usage, "completion_tokens", 0)
+    _usage_log["calls"] += 1
 
     return _safe_json_parse(response.choices[0].message.content, model_id)
 
