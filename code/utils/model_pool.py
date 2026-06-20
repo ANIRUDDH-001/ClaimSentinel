@@ -38,32 +38,38 @@ GEMINI_MODELS: list[ModelSpec] = [
 ]
 
 GROQ_MODELS: list[ModelSpec] = [
-    ModelSpec("groq", "llama-3.3-70b-versatile",                  rpm=30, tpm=12_000,  rpd=1000, vision=False),
+    # Ordered by quality × TPD budget. llama-3.3-70b has best quality but only 100K TPD.
+    # Scout has 500K TPD and good quality — preferred for sustained runs.
     ModelSpec("groq", "meta-llama/llama-4-scout-17b-16e-instruct", rpm=30, tpm=30_000,  rpd=1000, vision=False),
-    ModelSpec("groq", "qwen/qwen3-32b",                           rpm=60, tpm=6_000,   rpd=1000, vision=False),
+    ModelSpec("groq", "llama-3.3-70b-versatile",                   rpm=30, tpm=12_000,  rpd=1000, vision=False),
+    ModelSpec("groq", "qwen/qwen3-32b",                            rpm=60, tpm=6_000,   rpd=1000, vision=False),
+    ModelSpec("groq", "qwen/qwen3.6-27b",                          rpm=30, tpm=8_000,   rpd=1000, vision=False),
+    ModelSpec("groq", "llama-3.1-8b-instant",                      rpm=30, tpm=6_000,   rpd=14400, vision=False),
 ]
 
 # Stage-specific text model preference
 STAGE_TEXT_PREFERENCE: dict[str, list[str]] = {
     "claim_parser": [
+        "meta-llama/llama-4-scout-17b-16e-instruct",  # 500K TPD, good quality
         "llama-3.3-70b-versatile",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
         "qwen/qwen3-32b",
     ],
     "evidence": [
         "meta-llama/llama-4-scout-17b-16e-instruct",  # 30K TPM suits longer evidence prompts
-        "llama-3.3-70b-versatile",
         "qwen/qwen3-32b",
+        "llama-3.3-70b-versatile",
     ],
     "decision": [
-        "llama-3.3-70b-versatile",                    # Best quality for the final decision
-        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "meta-llama/llama-4-scout-17b-16e-instruct",  # Best TPD budget for sustained runs
+        "llama-3.3-70b-versatile",                     # Highest quality fallback
+        "qwen/qwen3-32b",
     ],
     "judge": [
         # Judge MUST use a different provider than the decision maker (cross-validation)
         "gemini-3.1-flash-lite",
     ],
 }
+
 
 
 class ModelPool:

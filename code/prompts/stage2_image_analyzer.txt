@@ -19,8 +19,22 @@ Q2 — PART VISIBILITY: Is "{claimed_part}" visible in this image?
      If YES, describe what you see of that part.
 
 Q3 — DAMAGE ASSESSMENT: Is there ANY damage visible on the claimed part?
-     If YES: Describe EXACTLY what type of damage you see (dent? crack? scratch? tear?)
-             How severe: low (minor cosmetic) / medium (significant) / high (severe/structural)?
+     If YES: Describe EXACTLY what type of damage you see using these definitions:
+       scratch = surface marking with no depth, paint transfer or scuff
+       dent = deformation/depression with depth, metal pushed inward
+       crack = a line or fracture in a surface WITHOUT shattering into pieces
+       glass_shatter = glass broken into fragments or spiderweb fracture pattern
+       broken_part = a component snapped, detached, or structurally failed
+       stain = discoloration or residue on surface only
+       water_damage = visible liquid pooling, warping, or corrosion from moisture
+       torn_packaging = package material ripped or opened
+       crushed_packaging = package compressed or deformed
+       missing_part = a component expected to be present is absent
+     Severity (use these anchors strictly):
+       low = cosmetic only, no functional impact (small scratch, minor scuff, light stain, small crease)
+       medium = clearly visible damage but structure/function intact (noticeable dent, visible crack, moderate stain, significant crease)
+       high = structural or functional compromise (shattered glass, broken hinge, deep crush, component detached or failed)
+       none = no damage visible
      If NO: Confirm the part appears undamaged.
      NOTE: Report what IS there, not what the user says should be there.
 

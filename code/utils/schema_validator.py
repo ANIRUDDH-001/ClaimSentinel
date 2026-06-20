@@ -95,6 +95,13 @@ def validate_stage_output(stage: str, output: dict) -> tuple[bool, dict]:
         else:
             if expected_type == bool and isinstance(repaired[field], str):
                 repaired[field] = repaired[field].strip().lower() == "true"
+            elif expected_type == str and isinstance(repaired[field], str):
+                # Sanitize: some models return "dent|scratch|crack" instead of picking one.
+                # Take the first value before any pipe character.
+                val = repaired[field].strip()
+                if "|" in val:
+                    val = val.split("|")[0].strip()
+                repaired[field] = val
 
     return is_valid, repaired
 

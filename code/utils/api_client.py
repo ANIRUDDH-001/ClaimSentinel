@@ -76,7 +76,9 @@ def call_vision(prompt: str, image_path: str, base_dir: str,
     return result
 
 
-def _call_with_retry(spec: ModelSpec, prompt: str, image=None) -> dict:
+def _call_with_retry(spec: ModelSpec, prompt: str, image=None,
+                     _excluded: set = None) -> dict:
+    _excluded = _excluded or set()
     last_error = None
 
     for attempt in range(MAX_RETRIES):
@@ -104,20 +106,24 @@ def _call_with_retry(spec: ModelSpec, prompt: str, image=None) -> dict:
 
         except Exception as e:
             logging.error(f"Unexpected error on {spec.model_id}: {e}")
+            # Mark model as exhausted so the pool stops returning it
+            _mark_model_exhausted(spec.model_id)
             last_error = e
             break
 
     logging.warning(f"All retries failed for {spec.model_id}. Trying next model.")
+    _excluded.add(spec.model_id)
 
     if image is not None:
         next_spec = _get_next_vision_model(exclude=spec.model_id)
     else:
-        next_spec = None
+        next_spec = _get_next_text_model(exclude=_excluded)
 
     if next_spec:
-        return _call_with_retry(next_spec, prompt, image)
+        return _call_with_retry(next_spec, prompt, image, _excluded=_excluded)
 
     return {}
+
 
 
 def _call_gemini(model_id: str, prompt: str, image=None) -> dict:
@@ -171,3 +177,26 @@ def _get_next_vision_model(exclude: str):
         if spec.model_id != exclude and spec.rpd_safe:
             return spec
     return None
+
+
+def _get_next_text_model(exclude: set):
+    """Find next available text model, excluding all failed ones.
+    Tries Groq models first, then falls back to Gemini."""
+    from utils.model_pool import GROQ_MODELS, GEMINI_MODELS
+    for spec in GROQ_MODELS:
+        if spec.model_id not in exclude and spec.rpd_safe:
+            return spec
+    # Last resort: Gemini flash-lite for text
+    for spec in GEMINI_MODELS:
+        if spec.model_id not in exclude and spec.rpd_safe:
+            return spec
+    return None
+
+
+def _mark_model_exhausted(model_id: str):
+    """Mark a model as exhausted so the pool stops returning it this run."""
+    spec = pool._all.get(model_id)
+    if spec:
+        spec.used_rpd = spec.rpd  # Saturate to prevent further selection
+        logging.warning(f"Marked {model_id} as exhausted (TPD/RPD limit hit)")
+

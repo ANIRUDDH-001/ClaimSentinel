@@ -31,7 +31,7 @@ If no damage visible: "none". If wrong object or unidentifiable: "unknown".
 
 RULE B — severity:
 Rate the severity of what is ACTUALLY VISIBLE, not what the user claims.
-Anchors: high=structural/total destruction, medium=significant damage, low=minor cosmetic, none=no damage, unknown=cannot determine.
+Anchors: high=structural/functional compromise (shattered, broken, detached). medium=clearly visible damage, structure intact (noticeable dent, visible crack). low=cosmetic only (small scratch, minor scuff, light stain). none=no damage visible. unknown=cannot determine.
 
 RULE C — claim_status:
 "supported" → at least one image clearly shows damage matching the claim

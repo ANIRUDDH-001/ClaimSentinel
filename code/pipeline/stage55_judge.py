@@ -33,25 +33,36 @@ def run_judge(claim_object: str, claimed_part: str, claimed_issue: str, claim_su
 
     judge_result = call_text("judge", prompt)
 
-    if not judge_result or judge_result.get("verdict") == "approved":
+    if not judge_result or str(judge_result.get("verdict", "")).strip().lower() == "approved":
         return proposed_decision, [], []
 
     corrected = dict(proposed_decision)
 
-    if judge_result.get("claim_status_verdict") == "corrected":
-        correction = judge_result.get("claim_status_correction")
-        if correction in {"supported", "contradicted", "not_enough_information"}:
-            corrected["claim_status"] = correction
+    logging.debug(f"Judge raw response: {judge_result}")
 
-    if judge_result.get("issue_type_verdict") == "corrected":
+    # --- claim_status ---
+    VALID_STATUSES = {"supported", "contradicted", "not_enough_information"}
+    corrected["claim_status"] = _extract_correction(
+        judge_result, "claim_status", VALID_STATUSES,
+        proposed_decision.get("claim_status", "")
+    )
+
+    # --- issue_type ---
+    it_verdict = str(judge_result.get("issue_type_verdict", "ok")).strip().lower()
+    if it_verdict != "ok":
         correction = judge_result.get("issue_type_correction")
-        if correction:
-            corrected["issue_type"] = correction
+        if correction and str(correction).strip():
+            corrected["issue_type"] = str(correction).strip()
+        elif it_verdict not in {"ok", "corrected", "wrong", "incorrect", "error"}:
+            # The verdict field itself might contain the corrected value
+            corrected["issue_type"] = it_verdict
 
-    if judge_result.get("severity_verdict") == "corrected":
-        correction = judge_result.get("severity_correction")
-        if correction in {"none", "low", "medium", "high", "unknown"}:
-            corrected["severity"] = correction
+    # --- severity ---
+    VALID_SEVERITIES = {"none", "low", "medium", "high", "unknown"}
+    corrected["severity"] = _extract_correction(
+        judge_result, "severity", VALID_SEVERITIES,
+        proposed_decision.get("severity", "")
+    )
 
     flags_to_add = judge_result.get("risk_flags_to_add", []) or []
     flags_to_remove = judge_result.get("risk_flags_to_remove", []) or []
@@ -59,6 +70,38 @@ def run_judge(claim_object: str, claimed_part: str, claimed_issue: str, claim_su
     logging.info(f"Judge verdict=corrected: {judge_result.get('judge_reasoning', '')}")
 
     return corrected, flags_to_add, flags_to_remove
+
+
+def _extract_correction(judge_result: dict, field: str, valid_values: set,
+                        fallback: str) -> str:
+    """
+    Robustly extract a correction from the judge response.
+    Handles three patterns the LLM might use:
+      1. verdict="corrected", correction="supported"
+      2. verdict="wrong", correction="supported"
+      3. verdict="supported", correction=null  (value in verdict field directly)
+    """
+    verdict_key = f"{field}_verdict"
+    correction_key = f"{field}_correction"
+
+    verdict = str(judge_result.get(verdict_key, "ok")).strip().lower()
+    correction = judge_result.get(correction_key)
+
+    if verdict == "ok":
+        return fallback
+
+    # Try the explicit correction field first
+    if correction and str(correction).strip().lower() in valid_values:
+        return str(correction).strip().lower()
+
+    # Fall back: maybe the LLM put the corrected value in the verdict field itself
+    if verdict in valid_values:
+        return verdict
+
+    # Verdict says "not ok" but no valid correction found — keep original
+    logging.warning(f"Judge flagged {field} (verdict={verdict!r}) but no valid "
+                    f"correction found (correction={correction!r}). Keeping original.")
+    return fallback
 
 
 def _format_findings_detail(image_findings: list[dict]) -> str:
