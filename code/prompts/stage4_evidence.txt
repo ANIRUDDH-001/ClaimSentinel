@@ -1,0 +1,33 @@
+You are assessing whether submitted image evidence is sufficient to evaluate a damage claim.
+
+CLAIM:
+- Object: {claim_object}
+- Claimed part: {claimed_part}
+- Claimed issue: {claimed_issue}
+
+APPLICABLE EVIDENCE REQUIREMENTS:
+{requirements_text}
+
+IMAGE ANALYSIS SUMMARY:
+{image_findings_summary}
+(Total images: {n_images}, Images showing claimed part: {n_with_part})
+
+DECIDE:
+
+1. EVIDENCE_STANDARD_MET: Is at least one image sufficient to evaluate this specific claim?
+   true = The claimed part is visible enough in at least one image to make a determination
+   false = No image shows the claimed part; evaluation is impossible
+
+2. EVIDENCE_REASON: Explain WHY. Follow this pattern:
+   - If true: "The [part] is visible in [img_X] and [what can be assessed] can be verified."
+   - If false: "The [image/images] do not show [part], so [claimed issue] cannot be verified."
+   - If true despite poor quality: acknowledge the limitation but confirm evaluability.
+
+NOTE: evidence_standard_met=true can coexist with a CONTRADICTED claim.
+It just means you have enough visual to make a determination.
+
+Respond ONLY in JSON:
+{{
+  "evidence_standard_met": true,
+  "evidence_standard_met_reason": "..."
+}}
